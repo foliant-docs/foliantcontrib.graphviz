@@ -86,7 +86,15 @@ class Preprocessor(BasePreprocessorExt):
                 return f'<div class="graphviz-diag">{f.read()}</div>'
 
     def _fix_svg(self, compress_svg: bool, fix_size: bool, svg_path: PosixPath):
-        '''insert 100% instead of hardcoded height and width attributes'''
+        '''Optimizes the SVG file:
+        1. With fix_size=True replaces the fixed width/height values by 100%
+        2. When compress_svg=True, it removes unnecessary spaces and line breaks between tags.
+
+        Args:
+            compress_svg (bool): Whether to compress SVG (remove spaces between tags)
+            fix_size (bool): Whether to replace fixed sizes with percentages
+            svg_path (PosixPath): Path to the SVG file
+        '''
         p_width = r'(<svg .*width=").+?(")'
         p_height = r'(<svg .*height=").+?(")'
 
