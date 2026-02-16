@@ -1,3 +1,7 @@
+# 1.1.7
+
+-    Add: publishing workflow
+
 # 1.1.6
 
 -    Add: svg compression option (enabled by default). Compression removes spaces between tags and line breaks
