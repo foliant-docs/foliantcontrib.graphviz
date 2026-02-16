@@ -29,6 +29,7 @@ class Preprocessor(BasePreprocessorExt):
         'format': 'png',
         'params': {},
         'fix_svg_size': True,
+        'compress_svg': True,
     }
     tags = ('graphviz',)
     supported_engines = ('circo', 'dot', 'fdp', 'neato', 'osage',
@@ -82,21 +83,34 @@ class Preprocessor(BasePreprocessorExt):
             return f'![{config.get("caption", "")}]({diagram_path.absolute().as_posix()})'
         else:
             with open(diagram_path, 'r') as f:
-                return f'<div>{f.read()}</div>'
+                return f'<div class="graphviz-diag">{f.read()}</div>'
 
-    def _fix_svg_size(self, svg_path: PosixPath):
-        '''insert 100% instead of hardcoded height and width attributes'''
+    def _fix_svg(self, compress_svg: bool, fix_size: bool, svg_path: PosixPath):
+        '''Optimizes the SVG file:
+        1. With fix_size=True replaces the fixed width/height values by 100%
+        2. When compress_svg=True, it removes unnecessary spaces and line breaks between tags.
+
+        Args:
+            compress_svg (bool): Whether to compress SVG (remove spaces between tags)
+            fix_size (bool): Whether to replace fixed sizes with percentages
+            svg_path (PosixPath): Path to the SVG file
+        '''
         p_width = r'(<svg .*width=").+?(")'
         p_height = r'(<svg .*height=").+?(")'
 
         with open(svg_path, encoding='utf8') as f:
             content = f.read()
 
-        result = re.sub(p_width, r'\g<1>100%\g<2>', content)
-        result = re.sub(p_height, r'\g<1>100%\g<2>', result)
+        if fix_size:
+            content = re.sub(p_width, r'\g<1>100%\g<2>', content)
+            content = re.sub(p_height, r'\g<1>100%\g<2>', content)
+
+        if compress_svg:
+            content = re.sub(r'>\s+<', '><', content)
+            content = content.replace('\n', '')
 
         with open(svg_path, 'w', encoding='utf8') as f:
-            f.write(result)
+            f.write(content)
 
     @allow_fail('Error while processing graphviz tag.')
     def _process_diagrams(self, block) -> str:
@@ -152,8 +166,8 @@ class Preprocessor(BasePreprocessorExt):
                           context=self.get_tag_context(block))
             return block.group(0)
 
-        if options['format'] == 'svg' and options['fix_svg_size']:
-            self._fix_svg_size(diagram_path)
+        if options['format'] == 'svg' and (options['fix_svg_size'] or options['compress_svg']):
+            self._fix_svg(options['compress_svg'], options['fix_svg_size'], diagram_path)
 
         self.logger.debug(f'Diagram image saved')
 
